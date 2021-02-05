@@ -1,6 +1,7 @@
 // const csv = require("csv");
 const fs = require("fs");
 const converter = require("json-2-csv");
+let usernameNotFound = [];
 
 // Gets a single comment
 const getComment = async (octokit, values, issueNumber) => {
@@ -37,10 +38,11 @@ const getFullCommentData = async (octokit, values, data, verbose = false) => {
     }
     const commentsData = await getComment(octokit, values, issueObject.number);
     commentsData.forEach((comment) => {
+      let username = getNewUsername(values.usernameData, comment.user.login)
       fullComments.push({
         issue: issueObject,
         comment: {
-          user: comment.user.login,
+          user: username,
           created_at: comment.created_at,
           updated_at: comment.updated_at,
           body: comment.body,
@@ -89,7 +91,7 @@ const twoPadNumber = (number) => {
   return String(number).padStart(2, "0");
 };
 
-const defaultExportColumns = (data) => {
+const defaultExportColumns = (data, usernameData) => {
   return data.map((issueObject) => {
     const ret = {
       number: issueObject.number,
@@ -106,7 +108,7 @@ const defaultExportColumns = (data) => {
       body: issueObject.body,
     };
     if (issueObject.user) {
-      ret.user = issueObject.user.login;
+      ret.user = getNewUsername(usernameData, issueObject.user.login);
     }
     if (issueObject.labels) {
       ret.labels = issueObject.labels
@@ -116,12 +118,12 @@ const defaultExportColumns = (data) => {
         .join(",");
     }
     if (issueObject.assignee && issueObject.assignee.login) {
-      ret.assignee = issueObject.assignee.login;
+      ret.assignee = getNewUsername(usernameData, issueObject.assignee.login);
     }
     if (issueObject.assignees && issueObject.assignees.length > 0) {
       ret.assignees = issueObject.assignees
         .map((assigneeObject) => {
-          return assigneeObject.login;
+          return getNewUsername(usernameData, assigneeObject.login);
         })
         .join(",");
     }
@@ -132,7 +134,7 @@ const defaultExportColumns = (data) => {
   });
 };
 
-const getDataAttribute = (issueObject, attribute) => {
+const getDataAttribute = (issueObject, attribute, usernameData) => {
   if (attribute.indexOf(".") > 0) {
     const parts = attribute.split(".");
     let currentObject = issueObject;
@@ -143,6 +145,9 @@ const getDataAttribute = (issueObject, attribute) => {
         Object.prototype.hasOwnProperty.call(currentObject, part)
       ) {
         currentObject = currentObject[part];
+        if (part === "login") {
+          currentObject = getNewUsername(usernameData, currentObject);
+        }
       } else {
         currentObject = "";
       }
@@ -153,17 +158,35 @@ const getDataAttribute = (issueObject, attribute) => {
   }
 };
 
-const specificAttributeColumns = (data, attributes) => {
+const getNewUsername = (usernameData, github_username) => {
+  let userObj = usernameData.find( obj => { return obj.github_username === github_username})
+    if (userObj) {
+      let new_username = userObj.new_username;
+      return new_username;
+    } else if (usernameNotFound.indexOf(github_username) === -1) {
+      usernameNotFound.push(github_username);
+      return github_username;
+    }
+}
+
+const specificAttributeColumns = (data, attributes, usernameData) => {
   return data.map((issueObject) => {
     const ret = {};
     attributes.forEach((attribute) => {
-      ret[attribute] = getDataAttribute(issueObject, attribute);
+      ret[attribute] = getDataAttribute(issueObject, attribute, usernameData);
     });
     return ret;
   });
 };
 
 const exportIssues = (octokit, values) => {
+  // Load the username data
+  if (values.usernames != "") {
+    const usernameData = require(values.usernames); 
+    values.usernameData = usernameData;
+  } else {
+    values.usernameData = [];
+  }
   // Getting all the issues:
   const options = octokit.issues.listForRepo.endpoint.merge({
     owner: values.userOrOrganization,
@@ -173,12 +196,12 @@ const exportIssues = (octokit, values) => {
   octokit.paginate(options).then(
     async (data) => {
       // default export - columns that are compatible to be imported into GitHub
-      let filteredData = defaultExportColumns(data);
+      let filteredData = defaultExportColumns(data, values.usernameData);
       if (values.exportAll) {
         // Just pass "data", it will flatten the JSON object we got from the API and use that (lots of data!)
         filteredData = data;
       } else if (values.exportAttributes) {
-        filteredData = specificAttributeColumns(data, values.exportAttributes);
+        filteredData = specificAttributeColumns(data, values.exportAttributes, values.usernameData);
       }
 
       // Add on comments, if requested.
@@ -210,6 +233,11 @@ const exportIssues = (octokit, values) => {
       writeFile(csvData, values.exportFileName).then(
         (fileName) => {
           console.log(`Success! check ${fileName}`);
+          let unknownUserCount = usernameNotFound.length;
+          if (unknownUserCount != 0) {
+            console.log('the following ' + unknownUserCount + ' github users were not found in the username file:');
+            console.log(usernameNotFound);
+          }
           console.log(
             "❤ ❗ If this project has provided you value, please ⭐ star the repo to show your support: ➡ https://github.com/gavinr/github-csv-tools"
           );

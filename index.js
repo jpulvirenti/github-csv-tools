@@ -37,6 +37,9 @@ program
   .option("-c, --exportComments", "Include comments in the export.")
   .option("-e, --exportAll", "Include all data in the export.")
   .option("-v, --verbose", "Include additional logging information.")
+  .option(
+    "-u, --usernames [usernameFileName]", 
+    "Swap github usernames for new usernames in export based on data in this json file.")
   .action(function (file, options) {
     co(function* () {
       var retObject = {};
@@ -68,6 +71,7 @@ program
       if (retObject.repo === "") {
         retObject.repo = yield prompt("repository: ");
       }
+      retObject.usernames = options.usernames || "";
       return retObject;
     }).then(
       function (values) {

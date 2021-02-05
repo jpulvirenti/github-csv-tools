@@ -1,0 +1,10 @@
+[
+    {
+        "github_username": "test1",
+        "new_username": "test1@example.com"
+    },
+    {
+        "github_username": "test2",
+        "new_username": "test2@example.com"
+    }
+]
