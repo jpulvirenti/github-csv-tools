@@ -110,6 +110,9 @@ program
           importFile(octokit, file, values);
         } else {
           // this is an export!
+          if (values.verbose === true) {
+            console.log("Export started")
+          }
           exportIssues(octokit, values);
         }
       },

@@ -137,6 +137,7 @@ const defaultExportColumns = (data, usernameData) => {
     };
     if (issueObject.user) {
       ret.user = getNewUsername(usernameData, issueObject.user.login);
+      ret.watcher = ret.user;
     }
     if (issueObject.labels) {
       ret.labels = issueObject.labels
@@ -147,6 +148,7 @@ const defaultExportColumns = (data, usernameData) => {
     }
     if (issueObject.assignee && issueObject.assignee.login) {
       ret.assignee = getNewUsername(usernameData, issueObject.assignee.login);
+      ret.watcher2 = ret.assignee;
     }
     if (issueObject.assignees && issueObject.assignees.length > 0) {
       ret.assignees = issueObject.assignees
@@ -203,6 +205,8 @@ const specificAttributeColumns = (data, attributes, usernameData) => {
     attributes.forEach((attribute) => {
       ret[attribute] = getDataAttribute(issueObject, attribute, usernameData);
     });
+    ret["watcher"] = ret["user.login"];
+    ret["watcher2"] = ret["assignee.login"];
     return ret;
   });
 };
