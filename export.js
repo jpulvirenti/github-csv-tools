@@ -23,6 +23,34 @@ const getComment = async (octokit, values, issueNumber) => {
   });
 };
 
+// Given the full list of issues, appends a column for each comment. 
+const getFullCommentDataJiraFormat = async (octokit, values, data, verbose = false) => {
+  const fullComments = [];
+  for (let i = 0; i < data.length; i++) {
+    const issueObject = data[i];
+
+    if (verbose === true) {
+      console.log("getting comments for issue #: ", issueObject.number);
+    }
+    let commentNumber = 0
+    const commentsData = await getComment(octokit, values, issueObject.number);
+    commentsData.forEach((comment) => {
+      commentNumber++
+      let propertyName = "comment"+commentNumber
+      let username = getNewUsername(values.usernameData, comment.user.login, false)
+      let body = comment.body;
+      if (username === "") {
+        body = comment.user.login+" "+comment.body;
+      }
+      issueObject[propertyName] = comment.created_at+"; "+username+"; "+body
+    });
+    fullComments.push({
+      issue: issueObject
+    });
+  }
+  return fullComments;
+};
+
 // Given the full list of issues, returns back an array of all comments,
 // each with the issue data also included.
 const getFullCommentData = async (octokit, values, data, verbose = false) => {
@@ -214,12 +242,16 @@ const exportIssues = (octokit, values) => {
             csvData[0] &&
             Object.prototype.hasOwnProperty.call(csvData[0], "number")
           ) {
-            csvData = await getFullCommentData(
-              octokit,
-              values,
-              csvData,
-              values.verbose
-            );
+            if (values.jiraFormat === true) {
+              csvData = await getFullCommentDataJiraFormat(octokit, values, csvData, values.verbose);
+            } else {
+              csvData = await getFullCommentData(
+                octokit,
+                values,
+                csvData,
+                values.verbose
+              );
+            }
           } else {
             console.error(
               "Error: Must include issue number when exporting comments."
