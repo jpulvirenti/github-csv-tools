@@ -37,6 +37,7 @@ program
   .option("-c, --exportComments", "Include comments in the export.")
   .option("-e, --exportAll", "Include all data in the export.")
   .option("-v, --verbose", "Include additional logging information.")
+  .option("-j, --jiraFormat", "Format csv for importing into Jira.")
   .option(
     "-u, --usernames [usernameFileName]", 
     "Swap github usernames for new usernames in export based on data in this json file.")
@@ -71,6 +72,7 @@ program
       if (retObject.repo === "") {
         retObject.repo = yield prompt("repository: ");
       }
+      retObject.jiraFormat = options.jiraFormat || false;
       retObject.usernames = options.usernames || "";
       return retObject;
     }).then(

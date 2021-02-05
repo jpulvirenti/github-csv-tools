@@ -57,6 +57,7 @@ For all actions, the tool will ask you to input a GitHub token. To obtain this t
 | -o, --organization      | The User or Organization slug that the repo lives under. |
 | -r, --repository        | The repository name (slug).                              |
 | -v, --verbose           | Include additional logging information.                  |
+| -j, --jiraFormat        | Format csv for importing into Jira.                      |
 | -h, --help              | See all the options and help.                            |
 
 ## Development
