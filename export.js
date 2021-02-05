@@ -219,7 +219,7 @@ const exportIssues = (octokit, values) => {
   const options = octokit.issues.listForRepo.endpoint.merge({
     owner: values.userOrOrganization,
     repo: values.repo,
-    state: "all",
+    state: values.state,
   });
   octokit.paginate(options).then(
     async (data) => {

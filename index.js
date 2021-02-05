@@ -41,6 +41,7 @@ program
   .option(
     "-u, --usernames [usernameFileName]", 
     "Swap github usernames for new usernames in export based on data in this json file.")
+  .option("-s, --exportState [exportState]", "Limit the set of issues exported by specifying 'open' or 'closed' issues - defaults to 'all'")
   .action(function (file, options) {
     co(function* () {
       var retObject = {};
@@ -74,6 +75,7 @@ program
       }
       retObject.jiraFormat = options.jiraFormat || false;
       retObject.usernames = options.usernames || "";
+      retObject.state = options.exportState || "all";
       return retObject;
     }).then(
       function (values) {
