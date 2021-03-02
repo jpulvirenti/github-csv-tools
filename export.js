@@ -37,10 +37,11 @@ const getFullCommentDataJiraFormat = async (octokit, values, data, verbose = fal
     commentsData.forEach((comment) => {
       commentNumber++
       let propertyName = "comment"+commentNumber
-      let username = getNewUsername(values.usernameData, comment.user.login, false)
+      let username = getNewUsername(values.usernameData, comment.user.login)
       let body = comment.body;
       if (username === "") {
         body = comment.user.login+" "+comment.body;
+        username = "admin";
       }
       issueObject[propertyName] = comment.created_at+"; "+username+"; "+body
     });
@@ -183,6 +184,12 @@ const getDataAttribute = (issueObject, attribute, usernameData) => {
       }
     });
     return currentObject;
+  } else if (attribute === "labels") {
+      return issueObject.labels
+        .map((labelObject) => {
+          return labelObject.name;
+        })
+        .join(",");
   } else {
     return issueObject[attribute];
   }
@@ -195,15 +202,25 @@ const getNewUsername = (usernameData, github_username) => {
       return new_username;
     } else if (usernameNotFound.indexOf(github_username) === -1) {
       usernameNotFound.push(github_username);
-      return github_username;
+      return "";
+    } else {
+      return "";
     }
 }
 
-const specificAttributeColumns = (data, attributes, usernameData) => {
+const specificAttributeColumns = (data, attributes, usernameData, jiraFormat = false) => {
   return data.map((issueObject) => {
     const ret = {};
     attributes.forEach((attribute) => {
-      ret[attribute] = getDataAttribute(issueObject, attribute, usernameData);
+      if ((attribute === "labels")&&(jiraFormat)) {
+        let labelnumber = 0;
+        issueObject.labels.forEach((label) => {
+          labelnumber++;
+          ret["label"+labelnumber] = label.name;
+        });
+      } else {
+        ret[attribute] = getDataAttribute(issueObject, attribute, usernameData);
+      }
     });
     ret["watcher"] = ret["user.login"];
     ret["watcher2"] = ret["assignee.login"];
@@ -233,7 +250,7 @@ const exportIssues = (octokit, values) => {
         // Just pass "data", it will flatten the JSON object we got from the API and use that (lots of data!)
         filteredData = data;
       } else if (values.exportAttributes) {
-        filteredData = specificAttributeColumns(data, values.exportAttributes, values.usernameData);
+        filteredData = specificAttributeColumns(data, values.exportAttributes, values.usernameData, values.jiraFormat);
       }
 
       // Add on comments, if requested.
